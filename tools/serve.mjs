@@ -13,7 +13,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
 const flag = args.indexOf('--row-picker');
 const local = flag >= 0 ? path.resolve(args[flag + 1] || '') : null;
-const port = Number(args.find((a, i) => /^\d+$/.test(a) && i !== flag + 1)) || 8000;
+const port = Number(args.find((a, i) => /^\d+$/.test(a) && (flag < 0 || i !== flag + 1))) || 8000;
 const CDN = /https:\/\/cdn\.jsdelivr\.net\/gh\/ChaotX\/row-picker@[^/"']+\//g;
 const LOCAL_PATH = '/_row-picker/';
 const types = {
