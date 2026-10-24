@@ -1,7 +1,7 @@
 // row-picker: filter and sort a Google Sheet, see the matching rows live, and keep the query as a link.
 //
 //     import { startApp } from '<row-picker>/js/index.js';
-//     startApp({ name: 'plant-picker', storagePrefix: 'plant-picker', linksTitle: 'plant-picker links',
+//     startApp({ name: 'my-picker', storagePrefix: 'my-picker', linksTitle: 'my-picker links',
 //                locale: 'hu', strings: { hu: { startTitle: '…' } }, google: { clientId, apiKey, appId } });
 //
 // See settings.js for every option and its default.

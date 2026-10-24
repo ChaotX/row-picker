@@ -14,16 +14,17 @@ It is a static web app (plain JavaScript ES modules, no build step, no dependenc
 1. **Choose a spreadsheet:** paste its link (a `#gid=…` in it picks the tab), choose it in Google Drive, or open a
    recent one. A spreadsheet with several tabs asks which one holds the data (one item per row, column names in the
    first row); the choice is remembered, and **Data from tab** above the filters switches it.
-2. **Add filters.** Each filter card: column → filter type → values. The type is guessed from the column's values:
+2. **Add filters.** Each filter card: column → filter type → values. The type is guessed from the column's values.
+   The examples come from a table of hiking trails, one trail per row:
 
-   | Column holds | Example | Filter offered first |
+   | Column holds | Example column: values | Filter offered first |
    |---|---|---|
-   | one value or yes/no | `●`, `Yes` | **has a value / is empty** |
-   | numbers or ranges | `15–20`, `1,5–2`, `995 Ft` | **between** min … max (*overlaps* or *lies within*) |
-   | a few distinct values | `Shrub` | **is one of** (checkboxes with counts) |
-   | scale values joined by dashes | `Sun–half shade` | **is one of** + *Match parts of ranges* (counts for both parts) |
-   | comma-separated lists | `Hedge, solitary` | **includes** any / all of the items |
-   | anything else | free text | **text matches**: contains, is exactly, wildcard (`Acer*`), regular expression |
+   | one value or yes/no | *Dog friendly*: `●` or empty, `Yes` / `No` | **has a value / is empty** |
+   | numbers or ranges | *Length (km)*: `12–15`, `8,5`; *Entry fee*: `1 500 Ft` | **between** min … max (*overlaps* or *lies within*) |
+   | a few distinct values | *Region*: `North`, `Lakes`, `Hills` | **is one of** (checkboxes with counts) |
+   | scale values joined by dashes | *Difficulty*: `Easy`, `Easy–medium`, `Medium` | **is one of** + *Match parts of ranges*: `Easy–medium` counts for Easy and for Medium |
+   | comma-separated lists | *Features*: `lake, viewpoint`, `forest, lake` | **includes** any / all of the items (lake, viewpoint, forest …) |
+   | anything else | *Name*, *Notes*: free text | **text matches**: contains, is exactly, wildcard (`Lake*`), regular expression |
 
    Any other type can be picked from the type menu. **Exclude** keeps the rows a filter does *not* match. The top
    line chooses whether *all* or *any* of the filters must match; a **Group** combines its filters the other way
@@ -190,11 +191,13 @@ js/shortlinks.js          the private short-link spreadsheet
 js/sheets-api.js, google-auth.js, picker.js, util.js, i18n.js
 js/ui/builder.js, results.js, start.js, dom.js
 i18n/en.js, i18n/hu.js    UI strings (sheet content is never translated)
-tests/                    node --test suites; fixtures/sample-plants.js = a small made-up table
+tests/                    node --test suites; fixtures/sample-plants.js = test data: a small made-up table of
+                          garden plants (Hungarian column names and values)
 ```
 
 ## Ideas
 
-- Column groups in the config: several yes/no columns as one filter (e.g. the months a plant flowers in).
-- Ordered scales in the config (Sun < Sun–half shade < Half shade …) so "at least half shade" can be asked.
+- Column groups in the config: several yes/no columns as one filter (e.g. a trail table with one column per
+  month, Jan … Dec, marking when the trail is open → one "open in" filter with the months to tick).
+- Ordered scales in the config (Easy < Easy–medium < Medium < Medium–hard < Hard) so "at most medium" can be asked.
 - Arbitrary nesting of groups in the UI (the query model and engine already support it).

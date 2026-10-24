@@ -49,7 +49,8 @@ export function isSet(value) {
 }
 
 // '1,5' → 1.5, '1 540' → 1540, '1.234,5' → 1234.5, '0.5' → 0.5, '1,540' → 1540 (a comma before exactly three
-// digits is a thousands separator, as in '1,540 Ft' from a sheet with English number format); null when not a number.
+// digits is a thousands separator, as in a price '1,540 Ft' from a sheet with English number format); null when
+// not a number.
 export function parseNumber(text) {
     let s = String(text).replace(/[\s  ]/g, '');
     if (!/^[+-]?(\d+([.,]\d+)*|[.,]\d+)$/.test(s)) return null;
@@ -71,7 +72,7 @@ export function parseNumber(text) {
 
 const RANGE_RE = /^\s*[~≈]?\s*(?:kb\.?\s*)?([+-]?[\d\s  .,]*\d)\s*(?:(?:[–—-]|\.\.)\s*([+-]?[\d\s  .,]*\d))?\s*([^\d]{0,12})$/i;
 
-// A number or range cell → [min, max], or null. Handles '15–20', '1,5–2 m', '0,4', 1540 (a number cell), '995 Ft'.
+// A number or range cell → [min, max], or null. Handles '15–20', '1,5–2 km', '0,4', 1540 (a number cell), '995 Ft'.
 export function parseRange(value) {
     if (typeof value === 'number') return Number.isFinite(value) ? [value, value] : null;
     const text = cellText(value);
@@ -85,7 +86,7 @@ export function parseRange(value) {
 }
 
 // Splits a list cell on , and ; outside parentheses and not inside a decimal number:
-// 'Sövény, szoliter (kicsi, nagy)' → ['Sövény', 'szoliter (kicsi, nagy)'], '1,5–2' → ['1,5–2'].
+// 'Lake, viewpoint (north, south)' → ['Lake', 'viewpoint (north, south)'], '1,5–2' → ['1,5–2'].
 export function splitList(text) {
     const s = String(text);
     const parts = [];
@@ -107,7 +108,7 @@ export function splitList(text) {
     return parts.map(p => p.trim()).filter(Boolean);
 }
 
-// Splits a scale value: 'Napos–félárnyék' → ['Napos', 'félárnyék'].
+// Splits a scale value: 'Easy–medium' → ['Easy', 'medium'].
 export function splitParts(text) {
     return String(text).split(/\s*[–—]\s*/).map(p => p.trim()).filter(Boolean);
 }
@@ -117,7 +118,7 @@ function capitalize(text) {
 }
 
 // How many of the given rows have each value of column ci (by folded key). mode: 'values' (whole cells), 'parts'
-// (scale parts: Napos–félárnyék counts for both) or 'tokens' (list items). A row counts once per value.
+// (scale parts: Easy–medium counts for both) or 'tokens' (list items). A row counts once per value.
 export function countValues(text, rows, ci, mode = 'values') {
     const counts = new Map();
     for (const r of rows) {
@@ -130,7 +131,7 @@ export function countValues(text, rows, ci, mode = 'values') {
 }
 
 // Counts values by their folded key, remembering the most common spelling of each (items of lists and scales
-// are shown capitalized: 'szoliter' and 'Szoliter' are one item).
+// are shown capitalized: 'lake' and 'Lake' are one item).
 function tally(values, capital = false) {
     const map = new Map();
     for (const v of values) {
@@ -171,7 +172,7 @@ export function profileColumn(raw, text) {
     const n = nonEmpty.length;
     const profile = { nonEmpty: n, values, numericRate: n ? parsed / n : 0, min: parsed ? min : null, max: parsed ? max : null };
 
-    // Scale values joined by dashes, made of values that also occur alone (Napos–félárnyék, Alacsony–közepes).
+    // Scale values joined by dashes, made of values that also occur alone (Easy–medium next to Easy and Medium).
     const known = new Set(values.map(v => fold(v.value)));
     const composite = values.filter(v => splitParts(v.value).length > 1);
     if (profile.numericRate < 0.5 && composite.length && composite.some(v => splitParts(v.value).every(p => known.has(fold(p))))) {
