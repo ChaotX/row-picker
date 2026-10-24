@@ -1038,3 +1038,40 @@ table.results dd {
 .chain.idle, .chip-count.idle {
     color: var(--orange);
 }
+
+/* ---- Column groups ---- */
+
+.virtual-note {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+
+.columns-subhead {
+    margin-top: 10px;
+    font-size: 12.5px;
+    color: var(--muted);
+}
+
+.group-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.strip {
+    display: inline-flex;
+    gap: 2px;
+}
+
+.strip span {
+    width: 7px;
+    height: 14px;
+    border-radius: 2px;
+    background: var(--border);
+}
+
+.strip span.on {
+    background: var(--green);
+}

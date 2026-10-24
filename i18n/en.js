@@ -152,6 +152,14 @@ export default {
     or: 'or',
 
     // Sort and columns
+    virtualColumns: 'Combined columns',
+    sheetColumns: 'Columns of the sheet',
+    memberColumns: 'Combined into another column',
+    virtualNote: 'Combined column, not in the sheet; made of: {columns}',
+    sortBy_first: 'by start',
+    sortBy_last: 'by end',
+    sortBy_count: 'by how many',
+    sortByGroupHint: 'Where the marked columns start or end (in their order), or how many are marked',
     sortTitle: 'Sort',
     sortFirst: 'by',
     sortThen: 'then',
@@ -179,6 +187,7 @@ export default {
     issue_notNumeric: 'Only {percent}% of “{column}” are numbers now; the other rows don’t match.',
     issue_unknownFilter: 'Unknown filter type “{kind}”; skipped.',
     issue_sortMissing: 'Can’t sort by “{column}”: it is no longer in the sheet.',
+    issue_groupColumnsMissing: 'Some columns of “{column}” are no longer in the sheet: {columns}.',
     issue_columnsMissing: 'Not shown, no longer in the sheet: {columns}.',
 
     // Results

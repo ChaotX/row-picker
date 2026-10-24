@@ -95,7 +95,25 @@ function opSelect(group, ctx, nested = false) {
 
 function columnLabel(ctx, index) {
     const p = ctx.table.profiles[index];
+    if (p.virtual) return `⧉ ${ctx.table.headers[index]}`;
     return `${ctx.table.headers[index]}  ${KIND_ICON[p.kind] || ''}`;
+}
+
+// The options of a column menu. With column groups: the combined (virtual) columns first, then the sheet's,
+// then the ones combined into a group, so those stay choosable but out of the way.
+function columnOptions(ctx, selected, label = i => columnLabel(ctx, i)) {
+    const { table } = ctx;
+    const virtual = [];
+    const plain = [];
+    const members = [];
+    table.headers.forEach((_, i) => (table.virtual?.has(i) ? virtual : table.memberColumns?.has(i) ? members : plain).push(i));
+    const opt = i => option(table.headers[i], label(i), i === selected);
+    if (!virtual.length && !members.length) return plain.map(opt);
+    return [
+        virtual.length ? el('optgroup', { label: t('virtualColumns') }, virtual.map(opt)) : null,
+        el('optgroup', { label: t('sheetColumns') }, plain.map(opt)),
+        members.length ? el('optgroup', { label: t('memberColumns') }, members.map(opt)) : null
+    ];
 }
 
 function defaultColumn(ctx) {
@@ -104,7 +122,7 @@ function defaultColumn(ctx) {
         if (!isGroup(node)) used.add(node.c);
     });
     // Prefer columns with a ready-made filter (a list of values, a range, a flag) that aren't in use yet.
-    const free = ctx.table.headers.findIndex((h, i) => !used.has(h) && ctx.table.profiles[i].kind !== 'text');
+    const free = ctx.table.headers.findIndex((h, i) => !used.has(h) && ctx.table.profiles[i].kind !== 'text' && !ctx.table.memberColumns?.has(i));
     return ctx.table.headers[free >= 0 ? free : 0];
 }
 
@@ -194,7 +212,7 @@ function renderFilter(filter, path, ctx) {
     const col = findColumn(table.headers, filter.c);
     const colSelect = el('select', { class: 'col-select', 'aria-label': t('column') },
         col.index < 0 ? option(filter.c, `⚠ ${filter.c} (${t('missing')})`, true) : null,
-        table.headers.map((h, i) => option(h, columnLabel(ctx, i), i === col.index)));
+        columnOptions(ctx, col.index));
     colSelect.addEventListener('change', () => {
         const fresh = filterFor(ctx, colSelect.value);
         replaceNode(ctx, path, { ...fresh, not: filter.not });
@@ -218,7 +236,9 @@ function renderFilter(filter, path, ctx) {
             el('span', { class: 'chain' }),
             moveButtons(ctx, path, siblingCount(ctx, path)),
             el('button', { class: 'icon', title: t('remove'), onclick: () => removeNode(ctx, path) }, '✕')),
-        el('div', { class: 'card-body' }, col.index >= 0 ? renderEditor(filter, table.profiles[col.index], ctx, { path, column: col.index }) : null),
+        el('div', { class: 'card-body' },
+            col.index >= 0 && table.profiles[col.index].virtual ? virtualNote(table.profiles[col.index].virtual) : null,
+            col.index >= 0 ? renderEditor(filter, table.profiles[col.index], ctx, { path, column: col.index }) : null),
         el('div', { class: 'issues' }));
     if (ctx.focusLast) queueMicrotask(() => {
         if (!ctx.focusLast) return;
@@ -227,6 +247,11 @@ function renderFilter(filter, path, ctx) {
         last?.focus();
     });
     return card;
+}
+
+// A combined column isn't in the sheet: say so, and what it is made of.
+function virtualNote(virtual) {
+    return el('div', { class: 'virtual-note' }, `⧉ ${t('virtualNote', { columns: virtual.labels.join(', ') })}`);
 }
 
 function replaceNode(ctx, path, node) {
@@ -270,7 +295,7 @@ function hasEditor(filter, profile, ctx, where) {
         filter.all = mode.value === 'all';
         ctx.onChange(false);
     });
-    return el('div', {}, el('div', { class: 'inline' }, el('span', {}, t('hasPrefix')), mode), checklist(filter, profile.tokens || profile.values, ctx, { ...where, mode: profile.tokens ? 'tokens' : 'values' }));
+    return el('div', {}, el('div', { class: 'inline' }, el('span', {}, t('hasPrefix')), mode), checklist(filter, profile.tokens || profile.values, ctx, { ...where, mode: profile.tokens ? 'tokens' : 'values', keepOrder: Boolean(profile.virtual) }));
 }
 
 // Checkboxes for the values of a column, with counts. Chosen values first, values gone from the sheet flagged.
@@ -305,12 +330,16 @@ function checklist(filter, pool, ctx, where) {
         const known = new Set(pool.map(v => fold(v.value)));
         const countOf = v => (counts ? counts.get(fold(v.value)) || 0 : v.count);
         const rest = pool.filter(v => !chosen.has(fold(v.value)) && countOf(v) > 0);
-        if (counts) rest.sort((a, b) => countOf(b) - countOf(a));
-        const items = [
-            ...filter.v.filter(v => !known.has(fold(v))).map(v => ({ value: v, count: 0, gone: true })),
-            ...pool.filter(v => chosen.has(fold(v.value))).map(v => ({ value: v.value, count: countOf(v) })),
-            ...rest.map(v => ({ value: v.value, count: countOf(v) }))
-        ];
+        if (counts && !where.keepOrder) rest.sort((a, b) => countOf(b) - countOf(a));
+        const gone = filter.v.filter(v => !known.has(fold(v))).map(v => ({ value: v, count: 0, gone: true }));
+        // Members of a column group keep their order (months stay Jan … Dec), chosen ones in their place.
+        const items = where.keepOrder
+            ? [...gone, ...pool.filter(v => chosen.has(fold(v.value)) || countOf(v) > 0).map(v => ({ value: v.value, count: countOf(v) }))]
+            : [
+                ...gone,
+                ...pool.filter(v => chosen.has(fold(v.value))).map(v => ({ value: v.value, count: countOf(v) })),
+                ...rest.map(v => ({ value: v.value, count: countOf(v) }))
+            ];
         box.replaceChildren(...items.map(item => {
             const input = el('input', { type: 'checkbox', checked: chosen.has(fold(item.value)) });
             input.addEventListener('change', () => {
@@ -441,10 +470,11 @@ function renderSort(ctx) {
     const { query, table } = ctx;
     const rows = query.o.map((key, i) => {
         const col = findColumn(table.headers, key.c);
-        const numeric = col.index >= 0 && table.profiles[col.index].kind === 'range';
+        const virtual = col.index >= 0 && Boolean(table.profiles[col.index].virtual);
+        const numeric = virtual || (col.index >= 0 && table.profiles[col.index].kind === 'range');
         const colSelect = el('select', { class: 'col-select' },
             col.index < 0 ? option(key.c, `⚠ ${key.c} (${t('missing')})`, true) : null,
-            table.headers.map((h, j) => option(h, h, j === col.index)));
+            columnOptions(ctx, col.index, j => (table.virtual?.has(j) ? `⧉ ${table.headers[j]}` : table.headers[j])));
         colSelect.addEventListener('change', () => {
             key.c = colSelect.value;
             ctx.onChange(true);
@@ -457,7 +487,16 @@ function renderSort(ctx) {
             ctx.onChange(false);
         });
         let by = null;
-        if (numeric) {
+        if (virtual) {
+            // A column group: where its set members start or end, or how many are set.
+            const current = ['first', 'last', 'count'].includes(key.by) ? key.by : 'first';
+            by = el('select', { class: 'small-select', title: t('sortByGroupHint') },
+                ['first', 'last', 'count'].map(b => option(b, t(`sortBy_${b}`), b === current)));
+            by.addEventListener('change', () => {
+                key.by = by.value;
+                ctx.onChange(false);
+            });
+        } else if (numeric) {
             by = el('select', { class: 'small-select', title: t('sortByHint') },
                 option('min', t('sortByMin'), key.by !== 'max'),
                 option('max', t('sortByMax'), key.by === 'max'));
@@ -507,7 +546,8 @@ function renderColumns(ctx) {
         query.cols = autoInput.checked ? null : table.headers.filter((_, i) => visible.has(i));
         ctx.onChange(true);
     });
-    const boxes = table.headers.map((h, i) => {
+    const box = i => {
+        const h = table.headers[i];
         const input = el('input', { type: 'checkbox', checked: visible.has(i), disabled: auto });
         input.addEventListener('change', () => {
             const current = query.cols ? [...query.cols] : table.headers.filter((_, j) => visible.has(j));
@@ -516,12 +556,18 @@ function renderColumns(ctx) {
             query.cols = table.headers.filter(x => next.includes(x));
             ctx.onChange(true);
         });
-        return el('label', { class: 'check' }, input, h);
-    });
+        return el('label', { class: 'check' }, input, table.virtual?.has(i) ? `⧉ ${h}` : h);
+    };
+    // Combined columns first, the ones combined into them last.
+    const all = table.headers.map((_, i) => i);
+    const members = all.filter(i => table.memberColumns?.has(i));
+    const main = [...all.filter(i => table.virtual?.has(i)), ...all.filter(i => !table.virtual?.has(i) && !table.memberColumns?.has(i))];
     const details = el('details', { class: 'section columns-section', open: Boolean(ctx.columnsOpen) },
         el('summary', {}, t('columnsTitle', { n: visible.size, total: table.headers.length })),
         el('label', { class: 'check' }, autoInput, t('columnsAuto')),
-        el('div', { class: 'columns-grid' }, boxes));
+        el('div', { class: 'columns-grid' }, main.map(box)),
+        members.length ? el('div', { class: 'columns-subhead' }, t('memberColumns')) : null,
+        members.length ? el('div', { class: 'columns-grid' }, members.map(box)) : null);
     details.addEventListener('toggle', () => {
         ctx.columnsOpen = details.open;
     });

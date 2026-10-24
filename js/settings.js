@@ -10,6 +10,8 @@ export const DEFAULTS = {
     locale: 'en',                       // for comparing and sorting cell text (e.g. 'hu' for Hungarian order)
     languages: ['en', 'hu'],            // UI languages offered; the first is the fallback
     strings: {},                        // UI text overrides per language: { hu: { startTitle: '…' } }
+    columnGroups: [],                   // yes / no columns shown as one virtual column (see groups.js):
+                                        // [{ name: 'Open', columns: ['Jan', …, 'Dec'], sequence: 'cyclic' }]
     google: { clientId: '', apiKey: '', appId: '' }
 };
 
@@ -17,7 +19,7 @@ export const settings = structuredClone(DEFAULTS);
 
 export function configure(config = {}) {
     const { google, strings, ...rest } = config;
-    Object.assign(settings, rest);
+    Object.assign(settings, structuredClone(DEFAULTS), rest);
     settings.google = { ...DEFAULTS.google, ...(google || {}) };
     settings.strings = strings || {};
     return settings;

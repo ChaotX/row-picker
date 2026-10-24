@@ -205,6 +205,7 @@ function detectKind(p) {
 
 // The filter types that make sense for a column, the most fitting first.
 export function filterKindsFor(profile) {
+    if (profile.virtual) return ['has', 'flag', 'text']; // a column group: its members, any are set, the list as text
     const kinds = [];
     if (profile.kind === 'flag') kinds.push('flag');
     if (profile.kind === 'range') kinds.push('range');

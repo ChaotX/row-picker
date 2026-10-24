@@ -7,6 +7,7 @@ import { LoadError, findTab, loadSpreadsheet, loadTab } from './data.js';
 import { hasSignedInBefore, hasValidToken, isConfigured, requestToken, signOut } from './google-auth.js';
 import { applyTranslations, getLanguage, languages, setLanguage, t } from './i18n.js';
 import { pickSpreadsheet, spreadsheetIdFromUrl } from './picker.js';
+import { addColumnGroups } from './groups.js';
 import { buildTable } from './profile.js';
 import { emptyQuery, runQuery } from './query.js';
 import { settings, storageKey } from './settings.js';
@@ -211,7 +212,7 @@ async function openTab(spreadsheet, tab, query, note = '') {
     }
     state.spreadsheet = spreadsheet;
     state.tab = tab;
-    state.table = buildTable(data.header, data.raw, data.text, t('columnWord'));
+    state.table = addColumnGroups(buildTable(data.header, data.raw, data.text, t('columnWord')), settings.columnGroups);
     state.query = { ...query, s: spreadsheet.id, g: tab.gid, t: tab.title };
     state.view = { shown: 0, expanded: new Set() };
     rememberRecent(spreadsheet, tab);

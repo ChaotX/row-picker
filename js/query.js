@@ -106,6 +106,9 @@ function compileFilter(filter, table, issues) {
     if (col.renamed) issues.push({ level: 'warn', code: 'columnRenamed', params: { column: filter.c, now: col.header } });
     const ci = col.index;
     const profile = table.profiles[ci];
+    if (profile.virtual?.missing.length) {
+        issues.push({ level: 'warn', code: 'groupColumnsMissing', params: { column: col.header, columns: profile.virtual.missing.join(', ') } });
+    }
     const text = table.text;
     const raw = table.raw;
 
@@ -239,7 +242,14 @@ export function resolveColumns(query, table) {
             continue;
         }
         if (col.renamed) notes.push({ level: 'warn', code: 'columnRenamed', params: { column: key.c, now: col.header } });
-        sort.push({ index: col.index, desc: key.d === 'desc', by: key.by === 'max' ? 1 : 0, numeric: table.profiles[col.index].kind === 'range' });
+        const profile = table.profiles[col.index];
+        if (profile.virtual) {
+            // A column group: by where its set members start or end, or by how many are set.
+            const by = ['first', 'last', 'count'].includes(key.by) ? key.by : 'first';
+            sort.push({ index: col.index, desc: key.d === 'desc', by, numeric: true, virtual: profile.virtual });
+            continue;
+        }
+        sort.push({ index: col.index, desc: key.d === 'desc', by: key.by === 'max' ? 1 : 0, numeric: profile.kind === 'range' });
     }
     let visible;
     if (Array.isArray(query.cols) && query.cols.length) {
@@ -273,6 +283,10 @@ export function defaultColumns(query, table) {
 }
 
 function sortValue(table, r, key) {
+    if (key.virtual) {
+        const row = key.virtual.rows[r];
+        return row.count ? row[key.by] : null; // nothing set: last, like an empty cell
+    }
     if (key.numeric) {
         const v = parseRange(table.raw[r][key.index] === '' ? table.text[r][key.index] : table.raw[r][key.index]);
         return v ? v[key.by] : null;

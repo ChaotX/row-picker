@@ -152,6 +152,14 @@ export default {
     or: 'vagy',
 
     // Sort and columns
+    virtualColumns: 'Összevont oszlopok',
+    sheetColumns: 'A táblázat oszlopai',
+    memberColumns: 'Csoportba vont oszlopok',
+    virtualNote: 'Összevont oszlop, a táblázatban nincs ilyen; ezekből áll: {columns}',
+    sortBy_first: 'kezdete szerint',
+    sortBy_last: 'vége szerint',
+    sortBy_count: 'darabszám szerint',
+    sortByGroupHint: 'Hol kezdődnek vagy végződnek a bejelölt oszlopok (a sorrendjükben), vagy hány van bejelölve',
     sortTitle: 'Rendezés',
     sortFirst: 'először',
     sortThen: 'majd',
@@ -179,6 +187,7 @@ export default {
     issue_notNumeric: 'A(z) „{column}” oszlopnak már csak {percent}%-a szám; a többi sor nem illik.',
     issue_unknownFilter: 'Ismeretlen szűrőtípus: „{kind}”; kihagyom.',
     issue_sortMissing: 'Nem rendezhető „{column}” szerint: már nincs a táblázatban.',
+    issue_groupColumnsMissing: 'A(z) „{column}” egyes oszlopai már nincsenek a táblázatban: {columns}.',
     issue_columnsMissing: 'Nem látható, mert már nincs a táblázatban: {columns}.',
 
     // Results

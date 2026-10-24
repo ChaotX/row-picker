@@ -4,6 +4,9 @@
 
 import { QUERY_VERSION } from './query.js';
 
+// Sort keys: 'min' / 'max' for ranges, 'first' / 'last' / 'count' for column groups.
+const SORT_BY = ['min', 'max', 'first', 'last', 'count'];
+
 function toBase64Url(bytes) {
     let binary = '';
     for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
@@ -45,7 +48,7 @@ export function compact(query) {
     if (query.n) out.n = query.n;
     if (query.g !== null && query.g !== undefined) out.g = query.g;
     if (query.t) out.t = query.t;
-    if (query.o?.length) out.o = query.o.map(o => ({ c: o.c, ...(o.d === 'desc' ? { d: 'desc' } : {}), ...(o.by === 'max' ? { by: 'max' } : {}) }));
+    if (query.o?.length) out.o = query.o.map(o => ({ c: o.c, ...(o.d === 'desc' ? { d: 'desc' } : {}), ...(o.by && o.by !== 'min' ? { by: o.by } : {}) }));
     if (query.cols?.length) out.cols = query.cols;
     return out;
 }
@@ -74,7 +77,7 @@ export function expand(data) {
         g: Number.isFinite(data.g) ? data.g : null,
         t: data.t || '',
         q: fix(data.q && Array.isArray(data.q.items) ? data.q : { op: 'and', items: [] }),
-        o: Array.isArray(data.o) ? data.o.filter(o => o && o.c).map(o => ({ c: String(o.c), d: o.d === 'desc' ? 'desc' : 'asc', by: o.by === 'max' ? 'max' : 'min' })) : [],
+        o: Array.isArray(data.o) ? data.o.filter(o => o && o.c).map(o => ({ c: String(o.c), d: o.d === 'desc' ? 'desc' : 'asc', by: SORT_BY.includes(o.by) ? o.by : 'min' })) : [],
         cols: Array.isArray(data.cols) && data.cols.length ? data.cols.map(String) : null
     };
 }

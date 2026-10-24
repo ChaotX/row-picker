@@ -27,14 +27,14 @@ export function renderResults(root, table, query, result, handlers, state) {
     const sortKey = query.o[0] ? findColumn(table.headers, query.o[0].c).index : -1;
     const thead = el('thead', {}, el('tr', {}, cols.map(c => el('th', {
         class: c === sortKey ? `sorted ${query.o[0].d === 'desc' ? 'desc' : 'asc'}` : '',
-        title: t('sortByColumn'),
+        title: table.virtual?.has(c) ? `${t('virtualNote', { columns: table.virtual.get(c).labels.join(', ') })}\n${t('sortByColumn')}` : t('sortByColumn'),
         onclick: () => handlers.onSortBy(table.headers[c])
-    }, table.headers[c]))));
+    }, table.virtual?.has(c) ? `⧉ ${table.headers[c]}` : table.headers[c]))));
     const tbody = el('tbody');
     const shown = Math.min(n, Math.max(PAGE, state.shown || 0));
     for (const r of result.rows.slice(0, shown)) {
         const tr = el('tr', { class: 'row', dataset: { row: r }, title: t('rowHint') },
-            cols.map(c => el('td', { dataset: { label: table.headers[c] } }, cell(table.text[r][c]))));
+            cols.map(c => el('td', { dataset: { label: table.headers[c] } }, table.virtual?.has(c) ? groupCell(table.virtual.get(c), r) : cell(table.text[r][c]))));
         tr.addEventListener('click', e => {
             if (e.target.closest('a')) return;
             if (state.expanded.has(r)) state.expanded.delete(r);
@@ -75,10 +75,19 @@ function cell(text) {
     return text;
 }
 
+// A column group's cell: one mark per member (set ones filled), then the summary ('Apr–May').
+function groupCell(virtual, r) {
+    const row = virtual.rows[r];
+    if (!row.count) return '';
+    return el('span', { class: 'group-cell', title: row.summary },
+        el('span', { class: 'strip', 'aria-hidden': 'true' }, virtual.labels.map((label, i) => el('span', { class: row.on[i] ? 'on' : '', title: label }))),
+        el('span', {}, row.summary));
+}
+
 // Every non-empty field of a row, below it.
 function detailsRow(table, r, span) {
     const fields = table.headers
-        .map((h, c) => [h, table.text[r][c]])
+        .map((h, c) => (table.virtual?.has(c) ? [`⧉ ${h}`, table.virtual.get(c).rows[r].summary] : [h, table.text[r][c]]))
         .filter(([, v]) => v !== '');
     return el('tr', { class: 'details' }, el('td', { colspan: span },
         el('dl', {}, fields.map(([h, v]) => [el('dt', {}, h), el('dd', {}, cell(v))])),

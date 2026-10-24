@@ -43,6 +43,20 @@ It is a static web app (plain JavaScript ES modules, no build step, no dependenc
    `…/?l=abc234` (see below). **New filter** starts an empty one on the same tab (Back brings the previous one).
    The panel closes to a one-line summary (▾); a link that has filters opens with it closed.
 
+### Combined columns
+
+An app can combine several yes / no columns into one *virtual* column (`columnGroups` in its config, see below).
+In a table of hiking trails with one column per month marking when a trail is open (`Jan` … `Dec`), a group
+"Open" made of them gives:
+
+- **one filter** (marked ⧉, with the columns it is made of): tick months, *any of* / *all of*; *has a value /
+  is empty* for "open at all";
+- **in the list**, one mark per month and a summary — `Apr–May`, `Dec–Feb` (over the year's end, with
+  `sequence: 'cyclic'`), `May–Jun, Sep`;
+- **sorting** by where the marked months start or end, or by how many are marked.
+
+The month columns stay in the table: at the end of the column menus, under *Combined into another column*.
+
 When nothing matches, the page says so and lists each filter with the number of rows it lets through alone and the
 number you'd get without it, with a button to remove it.
 
@@ -98,7 +112,7 @@ fixed version tag:
     <title>my-picker</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <script type="importmap">
-        { "imports": { "row-picker/": "https://cdn.jsdelivr.net/gh/ChaotX/row-picker@v1.0.0/" } }
+        { "imports": { "row-picker/": "https://cdn.jsdelivr.net/gh/ChaotX/row-picker@v1.1.0/" } }
     </script>
 </head>
 <body>
@@ -123,6 +137,9 @@ export default {
     locale: 'hu',                      // comparing and sorting cell text
     languages: ['hu', 'en'],           // UI languages offered
     strings: { hu: { startTitle: '…' }, en: { startTitle: '…' } },   // text overrides (keys: i18n/en.js)
+    columnGroups: [                    // yes / no columns as one virtual column (see Combined columns)
+        { name: 'Open', columns: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], sequence: 'cyclic' }
+    ],
     google: { clientId: '…', apiKey: '…', appId: '…' }
 };
 ```
@@ -165,7 +182,7 @@ Link-shared sheets work without any of this (step 2 above); sign-in needs it.
 ```js
 { v: 1, n: '<name>', s: '<spreadsheet id>', g: <tab gid>, t: '<tab title>',
   q: { op: 'and' | 'or', items: [filter | group] },   // group = { op, items, not }
-  o: [{ c: '<column>', d: 'desc', by: 'max' }],         // sort keys
+  o: [{ c: '<column>', d: 'desc', by: 'max' }],         // sort keys; by: min / max (ranges), first / last / count (combined)
   cols: ['<column>', …] }                               // shown columns (absent = automatic)
 filter = { c: '<column header>', k: 'in' | 'has' | 'range' | 'flag' | 'text', not, …
            v: [values], parts, all, wide, min, max, how: 'within', set: false, m: 'equals' | 'wildcard' | 'regex', x, cs }
@@ -184,6 +201,7 @@ js/shell.js               the page frame and stylesheet, put into the host page
 js/app.js                 screens, loading, URL sync, sharing, saved filters
 js/profile.js             column kinds, number / range / list parsing, table building
 js/query.js               query model, validation against the current columns, evaluation, counts, sorting
+js/groups.js              column groups: virtual columns made of yes / no columns
 js/codec.js               query ⇄ URL, comparison key
 js/data.js                key → public export → token access, error codes
 js/public-sheet.js        htmlview tab list, CSV export
@@ -197,7 +215,5 @@ tests/                    node --test suites; fixtures/sample-plants.js = test d
 
 ## Ideas
 
-- Column groups in the config: several yes/no columns as one filter (e.g. a trail table with one column per
-  month, Jan … Dec, marking when the trail is open → one "open in" filter with the months to tick).
 - Ordered scales in the config (Easy < Easy–medium < Medium < Medium–hard < Hard) so "at most medium" can be asked.
 - Arbitrary nesting of groups in the UI (the query model and engine already support it).
